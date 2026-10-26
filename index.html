@@ -3,13 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EverydayLoop — Habit Tracker</title>
+  <title>EverydayLoop — Habit Tracker (REA Clone)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+  <!-- Heatmap Tooltip -->
+  <div id="heatmapTooltip" class="heatmap-tooltip"></div>
 
   <!-- REA Provenance Ribbon -->
   <div class="rea-ribbon" id="reaRibbon">
@@ -36,18 +42,18 @@
         <span class="logo-text">EverydayLoop</span>
       </div>
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active">
+        <button class="nav-item active" data-nav="dashboard">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           Dashboard
-        </a>
-        <a href="#" class="nav-item">
+        </button>
+        <button class="nav-item" data-nav="analytics">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           Analytics
-        </a>
-        <a href="#" class="nav-item">
+        </button>
+        <button class="nav-item" data-nav="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
           Settings
-        </a>
+        </button>
       </nav>
       <div class="sidebar-footer">
         <button class="btn-add-sidebar" id="btnAddSidebarOpen" title="Add Habit (N)">
@@ -60,68 +66,250 @@
     <!-- Main Content -->
     <main class="main-content">
 
-      <!-- Top Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <h1 class="page-title">My Habits</h1>
-          <span class="date-label" id="todayLabel"></span>
-        </div>
-        <div class="header-right">
-          <button class="btn-icon" id="btnAddHabitOpen" title="Add Habit (N)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-        </div>
-      </header>
-
-      <!-- Motivational Quote Banner -->
-      <div class="quote-banner" id="quoteBanner">
-        <div class="quote-icon">✦</div>
-        <p class="quote-text" id="quoteText"></p>
-      </div>
-
-      <!-- Progress Summary Card -->
-      <div class="progress-card" id="progressCard">
-        <div class="progress-card-left">
-          <div class="progress-title">Today's Progress</div>
-          <div class="progress-subtitle" id="progressSubtitle">Loading…</div>
-        </div>
-        <div class="progress-card-right">
-          <div class="progress-badge" id="progressBadge">0%</div>
-        </div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="progressBarFill"></div>
-        </div>
-      </div>
-
-      <!-- Habits List -->
-      <section class="habits-section">
-        <div class="section-header">
-          <h2 class="section-title">Active Habits</h2>
-          <span class="section-count" id="habitsCount">0</span>
-        </div>
-
-        <!-- Empty State -->
-        <div class="empty-state" id="emptyState" style="display:none;">
-          <div class="empty-illustration">
-            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-              <circle cx="40" cy="40" r="38" stroke="#1e2d42" stroke-width="2"/>
-              <path d="M25 42l10 10 20-22" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      <!-- ================== VIEW 1: DASHBOARD ================== -->
+      <div id="viewDashboard" class="view-panel active">
+        <!-- Top Header -->
+        <header class="main-header">
+          <div class="header-left">
+            <h1 class="page-title">My Habits</h1>
+            <span class="date-label" id="todayLabel"></span>
           </div>
-          <h3 class="empty-title">No habits yet</h3>
-          <p class="empty-desc">Start building your perfect routine. Small steps, every day.</p>
-          <button class="btn-primary" id="btnEmptyStateAdd">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Your First Habit
-          </button>
+          <div class="header-right">
+            <button class="btn-icon" id="btnAddHabitOpen" title="Add Habit (N)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Motivational Quote Banner -->
+        <div class="quote-banner" id="quoteBanner">
+          <div class="quote-icon">✦</div>
+          <p class="quote-text" id="quoteText"></p>
         </div>
 
-        <!-- Habit Cards Container -->
-        <div class="habits-grid" id="habitsGrid"></div>
-      </section>
+        <!-- Progress Summary Card -->
+        <div class="progress-card" id="progressCard">
+          <div class="progress-card-left">
+            <div class="progress-title">Today's Progress</div>
+            <div class="progress-subtitle" id="progressSubtitle">Loading…</div>
+          </div>
+          <div class="progress-card-right">
+            <div class="progress-badge" id="progressBadge">0%</div>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="toolbar-row">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="habitSearchInput" placeholder="Search habits..." autocomplete="off" />
+            <button id="searchClearBtn" class="search-clear-btn" style="display:none">&times;</button>
+          </div>
+          <div class="filter-pills" id="filterPills">
+            <button class="filter-pill active" data-filter="all">All</button>
+            <button class="filter-pill" data-filter="pending">Pending</button>
+            <button class="filter-pill" data-filter="done">Completed</button>
+            <button class="filter-pill" data-filter="archived">Archived</button>
+          </div>
+        </div>
+
+        <!-- Habits List -->
+        <section class="habits-section">
+          <div class="section-header">
+            <h2 class="section-title" id="sectionTitleDisplay">Active Habits</h2>
+            <span class="section-count" id="habitsCount">0</span>
+          </div>
+
+          <!-- Empty State -->
+          <div class="empty-state" id="emptyState" style="display:none;">
+            <div class="empty-illustration">
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <circle cx="40" cy="40" r="38" stroke="#1e2d42" stroke-width="2"/>
+                <path d="M25 42l10 10 20-22" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="empty-title" id="emptyTitle">No habits found</h3>
+            <p class="empty-desc" id="emptyDesc">Start building your perfect routine. Small steps, every day.</p>
+            <button class="btn-primary" id="btnEmptyStateAdd">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Your First Habit
+            </button>
+          </div>
+
+          <!-- Habit Cards Container -->
+          <div class="habits-grid" id="habitsGrid"></div>
+        </section>
+      </div>
+
+      <!-- ================== VIEW 2: ANALYTICS ================== -->
+      <div id="viewAnalytics" class="view-panel" style="display:none;">
+        <header class="main-header">
+          <div class="header-left">
+            <h1 class="page-title">Analytics & Insights</h1>
+            <span class="date-label">Consistency metrics extracted from habit data</span>
+          </div>
+        </header>
+
+        <!-- KPI Grid -->
+        <div class="analytics-kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon">🎯</div>
+            <div class="kpi-value" id="kpiAvgScore">0%</div>
+            <div class="kpi-label">Average 30-Day Score</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">⚡</div>
+            <div class="kpi-value" id="kpiTotalCheckins">0</div>
+            <div class="kpi-label">Total Lifetime Check-ins</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🔥</div>
+            <div class="kpi-value" id="kpiLongestStreak">0 days</div>
+            <div class="kpi-label">Longest Active Streak</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🏆</div>
+            <div class="kpi-value" id="kpiBestDay">—</div>
+            <div class="kpi-label">Most Consistent Day</div>
+          </div>
+        </div>
+
+        <!-- Day of Week Distribution Chart -->
+        <div class="analytics-section-card">
+          <div class="card-header-row">
+            <div>
+              <h3 class="card-heading">Weekly Consistency Pattern</h3>
+              <p class="card-subheading">Which days of the week you complete the most habits</p>
+            </div>
+            <span class="badge-subtle">Past 60 Days</span>
+          </div>
+          <div class="dow-chart" id="dowChartContainer">
+            <!-- Bars rendered via app.js -->
+          </div>
+        </div>
+
+        <!-- Habit Performance Leaderboard -->
+        <div class="analytics-section-card">
+          <div class="card-header-row">
+            <div>
+              <h3 class="card-heading">Habit Leaderboard</h3>
+              <p class="card-subheading">Ranked by 30-day consistency score</p>
+            </div>
+          </div>
+          <div class="leaderboard-list" id="leaderboardList">
+            <!-- Rendered via app.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== VIEW 3: SETTINGS ================== -->
+      <div id="viewSettings" class="view-panel" style="display:none;">
+        <header class="main-header">
+          <div class="header-left">
+            <h1 class="page-title">Preferences & Data</h1>
+            <span class="date-label">Control persistence, sound, and exports</span>
+          </div>
+        </header>
+
+        <!-- Settings Cards -->
+        <div class="settings-grid">
+          <!-- Audio Preferences -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-icon">🔔</div>
+              <div>
+                <h3 class="settings-title">Audio Feedback</h3>
+                <p class="settings-desc">Play synthesized chime on habit completion</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="soundToggle" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Data Management -->
+          <div class="settings-card">
+            <h3 class="settings-title" style="margin-bottom:0.4rem">Data Backup & Export</h3>
+            <p class="settings-desc" style="margin-bottom:1.2rem">EverydayLoop is local-first. Your data is stored safely in your browser.</p>
+            
+            <div class="settings-actions-row">
+              <button class="btn btn-secondary" id="btnExportJson">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export JSON Backup
+              </button>
+              
+              <label class="btn btn-secondary" style="cursor:pointer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import JSON Backup
+                <input type="file" id="importJsonInput" accept=".json" style="display:none" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Demo & Reset Tools -->
+          <div class="settings-card">
+            <h3 class="settings-title" style="margin-bottom:0.4rem">Developer & Demo Tools</h3>
+            <p class="settings-desc" style="margin-bottom:1.2rem">Reset or reload realistic demo datasets for presentation purposes.</p>
+            
+            <div class="settings-actions-row">
+              <button class="btn btn-secondary" id="btnReloadSeedData">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                Reload Demo Seed Data
+              </button>
+              
+              <button class="btn btn-danger-outline" id="btnClearAllData">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                Reset All Habits
+              </button>
+            </div>
+          </div>
+
+          <!-- REA Architecture Specs Drawer -->
+          <div class="settings-card">
+            <h3 class="settings-title" style="margin-bottom:0.4rem">REA Reverse-Engineering Spec</h3>
+            <p class="settings-desc" style="margin-bottom:1rem">View the underlying AST extraction report generated by `morluto/rea`.</p>
+            <div class="rea-spec-box">
+              <div class="rea-spec-header">
+                <span>TARGET: EverydayLoop Habit Tracker</span>
+                <span class="badge-confidence">Confidence 96.4%</span>
+              </div>
+              <pre class="rea-spec-code"><code>// REA AST Trace: Streak Algorithm
+if (completed[today] || completed[yesterday]) {
+  streak = 1;
+  while (completed[cursor--]) streak++;
+}
+// Storage Model: Client Key-Value (everydayloop_habits_v2)
+// Schema: id, name, description, color, frequency, completions</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </main>
   </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-nav">
+    <button class="mobile-nav-item active" data-nav="dashboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>Habits</span>
+    </button>
+    <button class="mobile-nav-item" data-nav="analytics">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Insights</span>
+    </button>
+    <button class="mobile-nav-item" data-nav="settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      <span>Settings</span>
+    </button>
+    <button class="mobile-nav-add" id="btnMobileAdd" title="New Habit">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </nav>
 
   <!-- ===================== ADD HABIT MODAL ===================== -->
   <div class="modal-overlay" id="addHabitModal" role="dialog" aria-modal="true" aria-label="Add Habit">
@@ -142,14 +330,14 @@
           <textarea class="form-input form-textarea" id="habitDesc" placeholder="What does this habit mean to you?" rows="2" maxlength="120"></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label">Color</label>
+          <label class="form-label">Color Theme</label>
           <div class="color-swatches" id="colorSwatches" role="radiogroup" aria-label="Habit Color">
-            <button class="color-swatch" data-color="#10b981" style="--sw:hsla(160,69%,40%,1)" title="Emerald" aria-label="Emerald" role="radio"></button>
-            <button class="color-swatch" data-color="#6366f1" style="--sw:hsla(239,84%,67%,1)" title="Indigo" aria-label="Indigo" role="radio"></button>
-            <button class="color-swatch" data-color="#ec4899" style="--sw:hsla(330,86%,60%,1)" title="Pink" aria-label="Pink" role="radio"></button>
-            <button class="color-swatch" data-color="#f59e0b" style="--sw:hsla(37,92%,50%,1)" title="Amber" aria-label="Amber" role="radio"></button>
-            <button class="color-swatch" data-color="#06b6d4" style="--sw:hsla(192,91%,43%,1)" title="Cyan" aria-label="Cyan" role="radio"></button>
-            <button class="color-swatch" data-color="#8b5cf6" style="--sw:hsla(263,70%,63%,1)" title="Violet" aria-label="Violet" role="radio"></button>
+            <button class="color-swatch" data-color="#10b981" style="--sw:#10b981" title="Emerald" role="radio"></button>
+            <button class="color-swatch" data-color="#6366f1" style="--sw:#6366f1" title="Indigo" role="radio"></button>
+            <button class="color-swatch" data-color="#ec4899" style="--sw:#ec4899" title="Pink" role="radio"></button>
+            <button class="color-swatch" data-color="#f59e0b" style="--sw:#f59e0b" title="Amber" role="radio"></button>
+            <button class="color-swatch" data-color="#06b6d4" style="--sw:#06b6d4" title="Cyan" role="radio"></button>
+            <button class="color-swatch" data-color="#8b5cf6" style="--sw:#8b5cf6" title="Violet" role="radio"></button>
           </div>
         </div>
         <div class="form-group">
@@ -170,6 +358,43 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Create Habit
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== EDIT HABIT MODAL ===================== -->
+  <div class="modal-overlay" id="editHabitModal" role="dialog" aria-modal="true" aria-label="Edit Habit">
+    <div class="modal-panel modal-panel--add">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Habit</h2>
+        <button class="modal-close" id="btnEditClose" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="editHabitName">Habit Name <span class="required">*</span></label>
+          <input class="form-input" type="text" id="editHabitName" maxlength="48" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editHabitDesc">Description</label>
+          <textarea class="form-input form-textarea" id="editHabitDesc" rows="2" maxlength="120"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color Theme</label>
+          <div class="color-swatches" id="editColorSwatches">
+            <button class="color-swatch" data-color="#10b981" style="--sw:#10b981" title="Emerald"></button>
+            <button class="color-swatch" data-color="#6366f1" style="--sw:#6366f1" title="Indigo"></button>
+            <button class="color-swatch" data-color="#ec4899" style="--sw:#ec4899" title="Pink"></button>
+            <button class="color-swatch" data-color="#f59e0b" style="--sw:#f59e0b" title="Amber"></button>
+            <button class="color-swatch" data-color="#06b6d4" style="--sw:#06b6d4" title="Cyan"></button>
+            <button class="color-swatch" data-color="#8b5cf6" style="--sw:#8b5cf6" title="Violet"></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="btnEditCancel">Cancel</button>
+        <button class="btn-primary" id="btnEditSave">Save Changes</button>
       </div>
     </div>
   </div>
@@ -207,14 +432,14 @@
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statAllTime">—</div>
-            <div class="stat-label">All-Time</div>
+            <div class="stat-label">All-Time Checks</div>
           </div>
         </div>
 
         <!-- Heatmap -->
         <div class="heatmap-section">
           <div class="heatmap-header">
-            <h3 class="heatmap-title">90-Day Activity</h3>
+            <h3 class="heatmap-title">90-Day Contribution Heatmap</h3>
             <div class="heatmap-legend">
               <span class="legend-label">Less</span>
               <div class="legend-cells">
@@ -224,26 +449,32 @@
                 <div class="legend-cell" style="opacity:.85"></div>
                 <div class="legend-cell" style="opacity:1"></div>
               </div>
-              <span class="legend-label">More</span>
+              <span class="legend-label">Done</span>
             </div>
           </div>
-          <div class="heatmap-grid" id="detailHeatmap"></div>
-          <div class="heatmap-day-labels">
-            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          <div class="heatmap-wrap">
+            <div class="heatmap-day-labels">
+              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+            <div class="heatmap-grid" id="detailHeatmap"></div>
           </div>
         </div>
 
       </div>
       <div class="modal-footer detail-modal-footer">
-        <button class="btn-danger" id="btnDeleteHabit">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          Delete
+        <button class="btn-ghost" id="btnEditHabitTrigger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
         </button>
         <button class="btn-ghost" id="btnArchiveHabit">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-          Archive
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span id="archiveBtnText">Archive</span>
         </button>
-        <button class="btn-ghost" id="btnDetailClose2">Close</button>
+        <button class="btn-danger" id="btnDeleteHabit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Delete
+        </button>
+        <button class="btn-ghost" id="btnDetailClose2" style="margin-left:auto">Close</button>
       </div>
     </div>
   </div>

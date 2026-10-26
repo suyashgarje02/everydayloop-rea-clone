@@ -1,13 +1,13 @@
 /**
- * EverydayLoop — app.js
- * Complete application logic for the Habit Tracker
+ * EverydayLoop — app.js (Enhanced REA Reconstruction)
+ * Complete application logic, analytics engine, and persistence
  *
  * REA Analysis Pipeline:
  *   - ast-flow: reconstructed data model and state management
  *   - schema-extractor: habit data schema and localStorage structure
  *   - state-machine-tracer: streak engine, heatmap rendering, modal lifecycle
  *
- * Evidence confidence: 96.4%  |  Target: EverydayLoop Habit Tracker bundle
+ * Evidence confidence: 96.4% | Target: EverydayLoop Habit Tracker bundle
  */
 
 'use strict';
@@ -16,20 +16,21 @@
 // CONSTANTS & CONFIG
 // ===================================================================
 
-const STORAGE_KEY = 'everydayloop_habits_v2';
-const SEED_KEY    = 'everydayloop_seeded_v2';
+const STORAGE_KEY       = 'everydayloop_habits_v2';
+const SEED_KEY          = 'everydayloop_seeded_v2';
+const SOUND_SETTING_KEY = 'everydayloop_sound_enabled';
 
-/** REA Algorithm: Motivational quote pool extracted from copy bundle */
+/** REA Algorithm: Motivational quote pool extracted from bundle */
 const QUOTES = [
   '"We are what we repeatedly do. Excellence, then, is not an act, but a habit." — Aristotle',
   '"Success is the sum of small efforts, repeated day in and day out." — Robert Collier',
   '"The secret of your future is hidden in your daily routine." — Mike Murdock',
   '"A habit is a cable; we weave a thread of it each day." — Horace Mann',
-  '"Don\'t break the chain. Just show up." — Jerry Seinfeld (adapted)',
-  '"Small disciplines repeated with consistency every day lead to great achievements." — John Maxwell',
+  '"Don\'t break the chain. Just show up." — Jerry Seinfeld',
+  '"Small disciplines repeated with consistency lead to great achievements." — John Maxwell',
 ];
 
-/** Color definitions matching the 6 swatches */
+/** Color swatches matching palette */
 const COLORS = {
   emerald: '#10b981',
   indigo:  '#6366f1',
@@ -43,20 +44,26 @@ const COLORS = {
 // STATE
 // ===================================================================
 
-let habits = [];          // Array of habit objects
-let currentDetailId = null; // ID of habit open in detail modal
-let selectedColor = COLORS.emerald;
-let selectedFreq  = 'daily';
-let quoteIndex    = 0;
-let confirmCallback = null;
+let habits           = [];
+let currentDetailId  = null;
+let selectedColor    = COLORS.emerald;
+let editSelectedColor= COLORS.emerald;
+let selectedFreq     = 'daily';
+let quoteIndex       = 0;
+let confirmCallback  = null;
+let activeTab        = 'dashboard';
+let activeFilter     = 'all';
+let searchQuery      = '';
+let soundEnabled     = localStorage.getItem(SOUND_SETTING_KEY) !== 'false';
+
+// Web Audio API Context (Lazy initialized on first user gesture)
+let audioCtx = null;
 
 // ===================================================================
-// UTILITY — DATE HELPERS
+// DATE HELPERS (REA Spec)
 // ===================================================================
 
-/** REA Algorithm: Canonical date key used everywhere for lookups */
 function dateKey(date) {
-  // Format: "YYYY-MM-DD" in local time (avoids UTC drift)
   const d = new Date(date);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -64,25 +71,23 @@ function dateKey(date) {
   return `${y}-${m}-${day}`;
 }
 
-/** Returns Date object for N days ago relative to today (local) */
 function daysAgo(n) {
   const d = new Date();
   d.setDate(d.getDate() - n);
   return d;
 }
 
-/** Returns today's dateKey */
 function todayKey() { return dateKey(new Date()); }
-
-/** Returns yesterday's dateKey */
 function yesterdayKey() { return dateKey(daysAgo(1)); }
 
-/** Short day-of-week label for date */
 function shortDay(date) {
   return ['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(date).getDay()];
 }
 
-/** Full formatted date label for header */
+function fullDayName(idx) {
+  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][idx];
+}
+
 function formatHeaderDate(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
@@ -110,11 +115,11 @@ function loadHabits() {
 }
 
 // ===================================================================
-// SEED DATA — Demo habits with 60-day realistic history (~70% rate)
+// SEED DATA GENERATOR
 // ===================================================================
 
-function seedDemoData() {
-  if (localStorage.getItem(SEED_KEY)) return; // Already seeded
+function seedDemoData(force = false) {
+  if (!force && localStorage.getItem(SEED_KEY)) return;
 
   const seedHabits = [
     {
@@ -126,21 +131,21 @@ function seedDemoData() {
     },
     {
       name:  'Read 30 Pages',
-      desc:  'Non-fiction books that expand knowledge and perspective',
+      desc:  'Non-fiction books on engineering, science, or psychology',
       color: COLORS.indigo,
       freq:  'daily',
       freqCount: 7,
     },
     {
-      name:  'Workout',
-      desc:  'Strength training, running, or any 45-min exercise',
+      name:  'Workout & Mobility',
+      desc:  'Strength training, running, or 45-min exercise session',
       color: COLORS.amber,
       freq:  'daily',
       freqCount: 7,
     },
     {
-      name:  'Drink 2L Water',
-      desc:  'Hydration tracking — hit the 2-liter daily target',
+      name:  'Drink 2.5L Water',
+      desc:  'Daily hydration tracker — stay energized and focused',
       color: COLORS.cyan,
       freq:  'daily',
       freqCount: 7,
@@ -149,10 +154,8 @@ function seedDemoData() {
 
   habits = seedHabits.map((h, idx) => {
     const completions = {};
-    // Generate 60 days of realistic history at ~70% completion rate
     for (let i = 60; i >= 0; i--) {
-      // Slightly different rates per habit to make them look organic
-      const rate = [0.72, 0.68, 0.65, 0.78][idx];
+      const rate = [0.74, 0.68, 0.65, 0.82][idx];
       if (Math.random() < rate) {
         completions[dateKey(daysAgo(i))] = true;
       }
@@ -175,12 +178,7 @@ function seedDemoData() {
 }
 
 // ===================================================================
-// REA ALGORITHM: STREAK ENGINE
-// Extracted from target bundle — state-machine-tracer output
-//
-// Rules:
-//   - Active streak if today OR yesterday is completed
-//   - Count consecutive days backwards from the most recent completion
+// REA STREAK & SCORE ALGORITHMS
 // ===================================================================
 
 function computeStreak(habit) {
@@ -188,12 +186,10 @@ function computeStreak(habit) {
   const yk = yesterdayKey();
   const completed = habit.completions;
 
-  // Streak is "active" only if today or yesterday is done
   if (!completed[tk] && !completed[yk]) return 0;
 
-  // Walk backwards from most recent completed day
   let streak = 0;
-  let cursor = completed[tk] ? 0 : 1; // Start from today or yesterday
+  let cursor = completed[tk] ? 0 : 1;
 
   while (true) {
     const k = dateKey(daysAgo(cursor));
@@ -207,7 +203,6 @@ function computeStreak(habit) {
   return streak;
 }
 
-/** REA Algorithm: Best streak scan over last 120 days */
 function computeBestStreak(habit) {
   const completed = habit.completions;
   let best = 0;
@@ -225,7 +220,6 @@ function computeBestStreak(habit) {
   return best;
 }
 
-/** REA Algorithm: 30-day score = (completions in 30 days / 30) * 100 */
 function compute30DayScore(habit) {
   const completed = habit.completions;
   let count = 0;
@@ -235,35 +229,172 @@ function compute30DayScore(habit) {
   return Math.round((count / 30) * 100);
 }
 
-/** Count all-time completions */
 function computeAllTime(habit) {
   return Object.values(habit.completions).filter(Boolean).length;
 }
 
 // ===================================================================
-// TOGGLE COMPLETION
+// AUDIO CHIME & CELEBRATION EFFECTS
+// ===================================================================
+
+function playChime(isDone = true) {
+  if (!soundEnabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!audioCtx) audioCtx = new AudioContext();
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    if (isDone) {
+      // Pleasant rising chime: G5 -> C6
+      osc.frequency.setValueAtTime(783.99, now);
+      osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.12);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    } else {
+      // Subtle gentle blip
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(330, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    }
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch (e) {
+    // Audio context may be restricted before user interaction
+  }
+}
+
+// Lightweight zero-dependency canvas confetti
+function triggerConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = [];
+  const palette = ['#10b981', '#6366f1', '#ec4899', '#f59e0b', '#06b6d4', '#8b5cf6', '#ffffff'];
+
+  for (let i = 0; i < 90; i++) {
+    particles.push({
+      x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+      y: canvas.height * 0.4,
+      vx: (Math.random() - 0.5) * 12,
+      vy: Math.random() * -12 - 4,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      radius: Math.random() * 5 + 3,
+      tilt: Math.random() * 10,
+      tiltSpeed: Math.random() * 0.1 + 0.05,
+      alpha: 1,
+    });
+  }
+
+  let animationFrame;
+  function updateConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.35; // Gravity
+      p.alpha -= 0.012;
+
+      if (p.alpha > 0) {
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+
+    if (alive) {
+      animationFrame = requestAnimationFrame(updateConfetti);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      cancelAnimationFrame(animationFrame);
+    }
+  }
+
+  updateConfetti();
+}
+
+// ===================================================================
+// TOGGLE COMPLETIONS
 // ===================================================================
 
 function toggleDay(habitId, dKey) {
   const habit = habits.find(h => h.id === habitId);
   if (!habit) return;
-  if (habit.completions[dKey]) {
+
+  const wasCompleted = !!habit.completions[dKey];
+  if (wasCompleted) {
     delete habit.completions[dKey];
+    playChime(false);
   } else {
     habit.completions[dKey] = true;
+    playChime(true);
   }
+
   saveHabits();
   renderAll();
+
+  // Check if all active habits completed for today -> Confetti celebration!
+  const active = habits.filter(h => !h.archived);
+  if (active.length > 0 && active.every(h => h.completions[todayKey()]) && !wasCompleted) {
+    setTimeout(triggerConfetti, 180);
+  }
 }
 
 // ===================================================================
-// RENDER: MAIN HABIT LIST
+// NAVIGATION & TABS
+// ===================================================================
+
+function switchTab(tabName) {
+  activeTab = tabName;
+
+  // Update Sidebar & Mobile Nav Buttons
+  document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.nav === tabName);
+  });
+
+  // Toggle View Panels
+  const views = {
+    dashboard: document.getElementById('viewDashboard'),
+    analytics: document.getElementById('viewAnalytics'),
+    settings:  document.getElementById('viewSettings'),
+  };
+
+  Object.keys(views).forEach(k => {
+    if (views[k]) views[k].style.display = k === tabName ? 'flex' : 'none';
+  });
+
+  if (tabName === 'analytics') {
+    renderAnalytics();
+  }
+}
+
+// ===================================================================
+// RENDER: DASHBOARD VIEW
 // ===================================================================
 
 function renderAll() {
   renderProgress();
   renderHabits();
   if (currentDetailId) renderDetailModal(currentDetailId);
+  if (activeTab === 'analytics') renderAnalytics();
 }
 
 function renderProgress() {
@@ -286,31 +417,65 @@ function renderProgress() {
 function renderHabits() {
   const grid       = document.getElementById('habitsGrid');
   const emptyState = document.getElementById('emptyState');
+  const sectionTitle = document.getElementById('sectionTitleDisplay');
   if (!grid) return;
 
-  const active = habits.filter(h => !h.archived);
   grid.innerHTML = '';
 
-  if (active.length === 0) {
-    if (emptyState) emptyState.style.display = 'flex';
+  // Filter selection logic
+  let filtered = habits;
+  if (activeFilter === 'all') {
+    filtered = habits.filter(h => !h.archived);
+    if (sectionTitle) sectionTitle.textContent = 'Active Habits';
+  } else if (activeFilter === 'pending') {
+    filtered = habits.filter(h => !h.archived && !h.completions[todayKey()]);
+    if (sectionTitle) sectionTitle.textContent = 'Pending Today';
+  } else if (activeFilter === 'done') {
+    filtered = habits.filter(h => !h.archived && h.completions[todayKey()]);
+    if (sectionTitle) sectionTitle.textContent = 'Completed Today';
+  } else if (activeFilter === 'archived') {
+    filtered = habits.filter(h => h.archived);
+    if (sectionTitle) sectionTitle.textContent = 'Archived Habits';
+  }
+
+  // Search Query filter
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(h => h.name.toLowerCase().includes(q) || (h.desc && h.desc.toLowerCase().includes(q)));
+  }
+
+  if (filtered.length === 0) {
+    if (emptyState) {
+      emptyState.style.display = 'flex';
+      const emptyTitle = document.getElementById('emptyTitle');
+      const emptyDesc  = document.getElementById('emptyDesc');
+      if (searchQuery) {
+        if (emptyTitle) emptyTitle.textContent = 'No matching habits';
+        if (emptyDesc) emptyDesc.textContent = `No habits found matching "${searchQuery}".`;
+      } else if (activeFilter === 'archived') {
+        if (emptyTitle) emptyTitle.textContent = 'No archived habits';
+        if (emptyDesc) emptyDesc.textContent = 'Habits you archive will appear here.';
+      } else {
+        if (emptyTitle) emptyTitle.textContent = 'No habits yet';
+        if (emptyDesc) emptyDesc.textContent = 'Start building your perfect routine. Small steps, every day.';
+      }
+    }
     return;
   }
+
   if (emptyState) emptyState.style.display = 'none';
 
-  active.forEach(habit => {
-    const card = buildHabitCard(habit);
-    grid.appendChild(card);
+  filtered.forEach(habit => {
+    grid.appendChild(buildHabitCard(habit));
   });
 }
 
-/** Builds a habit card DOM node */
 function buildHabitCard(habit) {
   const streak = computeStreak(habit);
   const tk     = todayKey();
 
-  // Build 7-day rolling window (today is index 0)
   const days = Array.from({ length: 7 }, (_, i) => {
-    const d     = daysAgo(6 - i); // oldest first
+    const d     = daysAgo(6 - i);
     const dKey  = dateKey(d);
     const isToday = dKey === tk;
     const isDone  = !!habit.completions[dKey];
@@ -339,13 +504,32 @@ function buildHabitCard(habit) {
 
   info.append(nameEl, descEl);
 
+  const rightActions = document.createElement('div');
+  rightActions.style.display = 'flex';
+  rightActions.style.alignItems = 'center';
+  rightActions.style.gap = '0.6rem';
+
+  if (habit.archived) {
+    const unarchiveBtn = document.createElement('button');
+    unarchiveBtn.className = 'unarchive-btn';
+    unarchiveBtn.textContent = 'Restore';
+    unarchiveBtn.onclick = (e) => {
+      e.stopPropagation();
+      habit.archived = false;
+      saveHabits();
+      renderAll();
+    };
+    rightActions.appendChild(unarchiveBtn);
+  }
+
   const streakEl = document.createElement('div');
   streakEl.className = 'habit-streak';
   streakEl.innerHTML = streak > 0
     ? `<span class="habit-streak-icon">🔥</span> ${streak} day${streak !== 1 ? 's' : ''}`
     : `<span style="color:var(--text-muted);font-weight:500;font-size:.78rem">No streak</span>`;
 
-  top.append(info, streakEl);
+  rightActions.appendChild(streakEl);
+  top.append(info, rightActions);
 
   // Day pills row
   const pillsRow = document.createElement('div');
@@ -356,7 +540,6 @@ function buildHabitCard(habit) {
     pill.className = 'day-pill' + (isToday ? ' is-today' : '') + (isDone ? ' is-done' : '');
     pill.style.setProperty('--habit-color', habit.color);
     pill.setAttribute('aria-label', `${shortDay(d)} — ${isDone ? 'completed' : 'not done'}`);
-    pill.setAttribute('aria-pressed', isDone ? 'true' : 'false');
 
     const label = document.createElement('div');
     label.className = 'day-pill-label';
@@ -370,9 +553,8 @@ function buildHabitCard(habit) {
     dot.appendChild(dotInner);
     pill.append(label, dot);
 
-    // Toggle handler
     pill.addEventListener('click', e => {
-      e.stopPropagation(); // Don't open detail modal
+      e.stopPropagation();
       toggleDay(habit.id, dKey);
       pill.classList.add('just-toggled');
       pill.addEventListener('animationend', () => pill.classList.remove('just-toggled'), { once: true });
@@ -382,15 +564,130 @@ function buildHabitCard(habit) {
   });
 
   card.append(top, pillsRow);
-
-  // Click card body to open detail modal
   card.addEventListener('click', () => openDetailModal(habit.id));
 
   return card;
 }
 
 // ===================================================================
-// DETAIL MODAL
+// RENDER: ANALYTICS & INSIGHTS
+// ===================================================================
+
+function renderAnalytics() {
+  const active = habits.filter(h => !h.archived);
+
+  // 1. KPI Cards
+  const avgScore = active.length > 0
+    ? Math.round(active.reduce((acc, h) => acc + compute30DayScore(h), 0) / active.length)
+    : 0;
+
+  let totalCheckins = 0;
+  habits.forEach(h => {
+    totalCheckins += computeAllTime(h);
+  });
+
+  let longestActiveStreak = 0;
+  active.forEach(h => {
+    longestActiveStreak = Math.max(longestActiveStreak, computeStreak(h));
+  });
+
+  // Calculate day-of-week completions (past 60 days)
+  const dowCounts = [0, 0, 0, 0, 0, 0, 0];
+  const dowOccurrences = [0, 0, 0, 0, 0, 0, 0];
+
+  for (let i = 0; i < 60; i++) {
+    const d = daysAgo(i);
+    const dow = d.getDay();
+    const dKey = dateKey(d);
+    dowOccurrences[dow]++;
+
+    active.forEach(h => {
+      if (h.completions[dKey]) dowCounts[dow]++;
+    });
+  }
+
+  // Calculate percentages per day
+  let bestDowIdx = 0;
+  let bestDowRate = -1;
+  const dowRates = dowCounts.map((count, idx) => {
+    const possible = dowOccurrences[idx] * (active.length || 1);
+    const rate = possible > 0 ? Math.round((count / possible) * 100) : 0;
+    if (rate > bestDowRate) {
+      bestDowRate = rate;
+      bestDowIdx = idx;
+    }
+    return rate;
+  });
+
+  document.getElementById('kpiAvgScore').textContent = `${avgScore}%`;
+  document.getElementById('kpiTotalCheckins').textContent = totalCheckins.toLocaleString();
+  document.getElementById('kpiLongestStreak').textContent = `${longestActiveStreak} day${longestActiveStreak !== 1 ? 's' : ''}`;
+  document.getElementById('kpiBestDay').textContent = active.length > 0 ? `${fullDayName(bestDowIdx)} (${bestDowRate}%)` : '—';
+
+  // 2. Day of Week Chart
+  const chartContainer = document.getElementById('dowChartContainer');
+  if (chartContainer) {
+    chartContainer.innerHTML = '';
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    dayLabels.forEach((label, idx) => {
+      const col = document.createElement('div');
+      col.className = 'dow-col';
+
+      const pct = dowRates[idx];
+      col.innerHTML = `
+        <span class="dow-pct">${pct}%</span>
+        <div class="dow-bar-track">
+          <div class="dow-bar-fill" style="height: ${Math.max(6, pct)}%"></div>
+        </div>
+        <span class="dow-label">${label}</span>
+      `;
+      chartContainer.appendChild(col);
+    });
+  }
+
+  // 3. Leaderboard Ranking
+  const leaderboardList = document.getElementById('leaderboardList');
+  if (leaderboardList) {
+    leaderboardList.innerHTML = '';
+    const sorted = [...active].sort((a, b) => compute30DayScore(b) - compute30DayScore(a));
+
+    if (sorted.length === 0) {
+      leaderboardList.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem">No active habits to rank.</p>`;
+      return;
+    }
+
+    sorted.forEach((habit, idx) => {
+      const score = compute30DayScore(habit);
+      const streak = computeStreak(habit);
+      const item = document.createElement('div');
+      item.className = 'leaderboard-item';
+      item.style.cursor = 'pointer';
+      item.onclick = () => openDetailModal(habit.id);
+
+      item.innerHTML = `
+        <div class="leaderboard-left">
+          <span class="leaderboard-rank">#${idx + 1}</span>
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: ${habit.color}"></div>
+          <div class="leaderboard-info">
+            <span class="leaderboard-name">${habit.name}</span>
+            <span class="leaderboard-streak">🔥 ${streak} day streak · ${computeAllTime(habit)} checks</span>
+          </div>
+        </div>
+        <div class="leaderboard-right">
+          <div class="leaderboard-bar-wrap">
+            <div class="leaderboard-bar-fill" style="width: ${score}%; background: ${habit.color}"></div>
+          </div>
+          <span class="leaderboard-score" style="color: ${habit.color}">${score}%</span>
+        </div>
+      `;
+      leaderboardList.appendChild(item);
+    });
+  }
+}
+
+// ===================================================================
+// DETAIL MODAL & HEATMAP
 // ===================================================================
 
 function openDetailModal(habitId) {
@@ -403,67 +700,43 @@ function renderDetailModal(habitId) {
   const habit = habits.find(h => h.id === habitId);
   if (!habit) return;
 
-  // Header
   document.getElementById('detailHabitName').textContent = habit.name;
   document.getElementById('detailHabitDesc').textContent = habit.desc || '';
   document.getElementById('detailColorDot').style.background = habit.color;
 
-  // Set color variable on the modal for heatmap
+  const archiveBtnText = document.getElementById('archiveBtnText');
+  if (archiveBtnText) archiveBtnText.textContent = habit.archived ? 'Restore' : 'Archive';
+
   document.getElementById('detailHeatmap').style.setProperty('--habit-color', habit.color);
-  const legendCells = document.querySelectorAll('.legend-cell');
-  legendCells.forEach(c => c.style.setProperty('background', habit.color));
+  document.querySelectorAll('.legend-cell').forEach(c => c.style.setProperty('background', habit.color));
 
-  // Stats
-  const streak  = computeStreak(habit);
-  const best    = computeBestStreak(habit);
-  const score30 = compute30DayScore(habit);
-  const allTime = computeAllTime(habit);
+  document.getElementById('statCurrentStreak').textContent = `${computeStreak(habit)}🔥`;
+  document.getElementById('statBestStreak').textContent    = `${computeBestStreak(habit)}`;
+  document.getElementById('stat30Score').textContent       = `${compute30DayScore(habit)}%`;
+  document.getElementById('statAllTime').textContent       = computeAllTime(habit);
 
-  document.getElementById('statCurrentStreak').textContent = `${streak}🔥`;
-  document.getElementById('statBestStreak').textContent    = `${best}`;
-  document.getElementById('stat30Score').textContent       = `${score30}%`;
-  document.getElementById('statAllTime').textContent       = allTime;
-
-  // Heatmap
   renderHeatmap(habit);
 }
 
-/** REA Algorithm: 90-day contribution heatmap — 7 rows × ~13 cols */
 function renderHeatmap(habit) {
   const container = document.getElementById('detailHeatmap');
+  const tooltip   = document.getElementById('heatmapTooltip');
   if (!container) return;
   container.innerHTML = '';
 
-  const DAYS = 91; // 13 weeks × 7 = 91
-
-  // We need to offset to the start of a week (Sunday)
-  const today     = new Date();
-  const todayDow  = today.getDay(); // 0=Sun … 6=Sat
-  // Total cells = 91, ending today
-  // The last column's last used row = todayDow
-  // We pad the grid from sunday of the first week
-
-  // Build array of 91 dateKeys from oldest to newest
+  const DAYS = 91;
   const cells = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     cells.push(dateKey(daysAgo(i)));
   }
 
-  // The first cell in the grid should be a Sunday.
-  // Find how many days before cells[0] we need to pad.
-  const firstDate   = new Date(cells[0] + 'T12:00:00');
-  const firstDow    = firstDate.getDay();
-  const padBefore   = firstDow; // number of empty cells at start
-
-  // Grid is column-major (grid-auto-flow: column), 7 rows
-  // Total grid slots = ceil((padBefore + DAYS) / 7) * 7
+  const firstDate = new Date(cells[0] + 'T12:00:00');
+  const padBefore = firstDate.getDay();
   const totalSlots = Math.ceil((padBefore + DAYS) / 7) * 7;
-
-  // Set explicit column count so grid sizes correctly
   const numCols = totalSlots / 7;
+
   container.style.gridTemplateColumns = `repeat(${numCols}, 12px)`;
 
-  // Fill padding
   for (let i = 0; i < padBefore; i++) {
     const cell = document.createElement('div');
     cell.className = 'heatmap-cell';
@@ -471,22 +744,43 @@ function renderHeatmap(habit) {
     container.appendChild(cell);
   }
 
-  // Fill data cells
   cells.forEach(dk => {
     const cell = document.createElement('div');
     const done = habit.completions[dk];
     cell.className = 'heatmap-cell' + (done ? ' filled' : '');
     if (done) {
       cell.style.background = habit.color;
-      cell.style.opacity    = '1';
+      cell.style.opacity = '1';
     }
-    cell.title = dk + (done ? ' ✓' : '');
+
+    // Interactive Floating Tooltip
+    cell.addEventListener('mouseenter', e => {
+      if (tooltip) {
+        const readableDate = new Date(dk + 'T12:00:00').toLocaleDateString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+        });
+        tooltip.textContent = `${readableDate} — ${done ? 'Completed ✓' : 'No activity'}`;
+        tooltip.style.left = `${e.clientX}px`;
+        tooltip.style.top = `${e.clientY - 12}px`;
+        tooltip.style.opacity = '1';
+      }
+    });
+
+    cell.addEventListener('mousemove', e => {
+      if (tooltip) {
+        tooltip.style.left = `${e.clientX}px`;
+        tooltip.style.top = `${e.clientY - 12}px`;
+      }
+    });
+
+    cell.addEventListener('mouseleave', () => {
+      if (tooltip) tooltip.style.opacity = '0';
+    });
+
     container.appendChild(cell);
   });
 
-  // Fill trailing empties so grid is complete
-  const filled = padBefore + DAYS;
-  const trail  = totalSlots - filled;
+  const trail = totalSlots - (padBefore + DAYS);
   for (let i = 0; i < trail; i++) {
     const cell = document.createElement('div');
     cell.className = 'heatmap-cell';
@@ -496,25 +790,38 @@ function renderHeatmap(habit) {
 }
 
 // ===================================================================
-// ADD HABIT MODAL
+// ADD & EDIT HABIT MODALS
 // ===================================================================
 
 function openAddModal() {
-  // Reset form
   document.getElementById('habitName').value = '';
   document.getElementById('habitDesc').value = '';
   selectedColor = COLORS.emerald;
   selectedFreq  = 'daily';
-  updateSwatchUI();
+  updateSwatchUI('colorSwatches', selectedColor);
   updateFreqUI();
   openModal('addHabitModal');
-  setTimeout(() => document.getElementById('habitName').focus(), 280);
+  setTimeout(() => document.getElementById('habitName').focus(), 250);
 }
 
-function updateSwatchUI() {
-  document.querySelectorAll('.color-swatch').forEach(sw => {
-    sw.classList.toggle('active', sw.dataset.color === selectedColor);
-    sw.setAttribute('aria-checked', sw.dataset.color === selectedColor ? 'true' : 'false');
+function openEditModal(habitId) {
+  const habit = habits.find(h => h.id === habitId);
+  if (!habit) return;
+
+  document.getElementById('editHabitName').value = habit.name;
+  document.getElementById('editHabitDesc').value = habit.desc || '';
+  editSelectedColor = habit.color;
+
+  updateSwatchUI('editColorSwatches', editSelectedColor);
+  closeModal('detailModal');
+  openModal('editHabitModal');
+}
+
+function updateSwatchUI(containerId, activeHex) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === activeHex);
   });
 }
 
@@ -529,9 +836,10 @@ function updateFreqUI() {
 function saveNewHabit() {
   const name = document.getElementById('habitName').value.trim();
   if (!name) {
-    document.getElementById('habitName').focus();
-    document.getElementById('habitName').style.borderColor = '#ef4444';
-    setTimeout(() => { document.getElementById('habitName').style.borderColor = ''; }, 1500);
+    const el = document.getElementById('habitName');
+    el.focus();
+    el.style.borderColor = '#ef4444';
+    setTimeout(() => { el.style.borderColor = ''; }, 1500);
     return;
   }
 
@@ -556,22 +864,35 @@ function saveNewHabit() {
   renderAll();
 }
 
+function saveEditHabit() {
+  const habit = habits.find(h => h.id === currentDetailId);
+  if (!habit) return;
+
+  const name = document.getElementById('editHabitName').value.trim();
+  if (!name) return;
+
+  habit.name  = name;
+  habit.desc  = document.getElementById('editHabitDesc').value.trim();
+  habit.color = editSelectedColor;
+
+  saveHabits();
+  closeModal('editHabitModal');
+  openDetailModal(habit.id);
+  renderAll();
+}
+
 // ===================================================================
-// ARCHIVE / DELETE
+// ARCHIVE / DELETE / BACKUP ACTIONS
 // ===================================================================
 
-function archiveCurrentHabit() {
-  showConfirm(
-    '📦',
-    'Archive Habit?',
-    'The habit will be hidden from your dashboard. History is preserved.',
-    () => {
-      const habit = habits.find(h => h.id === currentDetailId);
-      if (habit) { habit.archived = true; saveHabits(); }
-      closeModal('detailModal');
-      renderAll();
-    }
-  );
+function toggleArchiveCurrentHabit() {
+  const habit = habits.find(h => h.id === currentDetailId);
+  if (!habit) return;
+
+  habit.archived = !habit.archived;
+  saveHabits();
+  closeModal('detailModal');
+  renderAll();
 }
 
 function deleteCurrentHabit() {
@@ -589,9 +910,42 @@ function deleteCurrentHabit() {
   );
 }
 
-// ===================================================================
-// CONFIRM DIALOG
-// ===================================================================
+function exportData() {
+  const backup = {
+    app: 'EverydayLoop',
+    version: '2.1.0',
+    exportedAt: new Date().toISOString(),
+    habits,
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `everydayloop_backup_${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (Array.isArray(parsed.habits)) {
+        habits = parsed.habits;
+        saveHabits();
+        renderAll();
+        alert(`Successfully imported ${habits.length} habits!`);
+      } else {
+        alert('Invalid backup file format.');
+      }
+    } catch (err) {
+      alert('Failed to parse JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
 
 function showConfirm(icon, title, desc, onConfirm) {
   document.getElementById('confirmIcon').textContent   = icon;
@@ -602,7 +956,7 @@ function showConfirm(icon, title, desc, onConfirm) {
 }
 
 // ===================================================================
-// MODAL OPEN / CLOSE HELPERS
+// MODAL CONTROLLERS
 // ===================================================================
 
 function openModal(id) {
@@ -621,7 +975,6 @@ function closeModal(id) {
   }
 }
 
-// Close modal when clicking the overlay backdrop (not the panel)
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) {
@@ -632,7 +985,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 // ===================================================================
-// QUOTE BANNER — Rotating every 10 seconds
+// MOTIVATIONAL QUOTES & DATE
 // ===================================================================
 
 function initQuoteBanner() {
@@ -650,63 +1003,84 @@ function initQuoteBanner() {
   }, 10000);
 }
 
-// ===================================================================
-// DATE LABEL IN HEADER
-// ===================================================================
-
 function initDateLabel() {
   const el = document.getElementById('todayLabel');
   if (el) el.textContent = formatHeaderDate(new Date());
 }
 
 // ===================================================================
-// KEYBOARD SHORTCUT — Press N to open Add Modal
-// ===================================================================
-
-document.addEventListener('keydown', e => {
-  // Don't trigger when typing in inputs
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'n' || e.key === 'N') {
-    e.preventDefault();
-    openAddModal();
-  }
-  if (e.key === 'Escape') {
-    // Close topmost open modal
-    ['confirmModal', 'detailModal', 'addHabitModal'].forEach(id => closeModal(id));
-  }
-});
-
-// ===================================================================
-// EVENT LISTENERS — Wire up all buttons
+// EVENT LISTENERS
 // ===================================================================
 
 function bindEvents() {
-  // Add Habit buttons
-  const btnOpen1 = document.getElementById('btnAddHabitOpen');
-  const btnOpen2 = document.getElementById('btnAddSidebarOpen');
-  const btnEmpty = document.getElementById('btnEmptyStateAdd');
-  if (btnOpen1) btnOpen1.addEventListener('click', openAddModal);
-  if (btnOpen2) btnOpen2.addEventListener('click', openAddModal);
-  if (btnEmpty) btnEmpty.addEventListener('click', openAddModal);
+  // Tab Navigation (Sidebar + Mobile)
+  document.querySelectorAll('[data-nav]').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.nav));
+  });
 
-  // Add modal close / save
-  const btnClose  = document.getElementById('btnAddClose');
-  const btnCancel = document.getElementById('btnAddCancel');
-  const btnSave   = document.getElementById('btnAddSave');
-  if (btnClose)  btnClose.addEventListener('click',  () => closeModal('addHabitModal'));
-  if (btnCancel) btnCancel.addEventListener('click', () => closeModal('addHabitModal'));
-  if (btnSave)   btnSave.addEventListener('click',   saveNewHabit);
-
-  // Color swatches
-  document.querySelectorAll('.color-swatch').forEach(sw => {
-    sw.addEventListener('click', () => {
-      selectedColor = sw.dataset.color;
-      updateSwatchUI();
+  // Filter Pills
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeFilter = pill.dataset.filter;
+      renderHabits();
     });
   });
-  updateSwatchUI(); // Init first swatch as active
 
-  // Frequency buttons
+  // Search Input
+  const searchInput = document.getElementById('habitSearchInput');
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      searchQuery = e.target.value.trim();
+      if (clearBtn) clearBtn.style.display = searchQuery ? 'inline-block' : 'none';
+      renderHabits();
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      clearBtn.style.display = 'none';
+      renderHabits();
+    });
+  }
+
+  // Add Habit buttons
+  ['btnAddHabitOpen', 'btnAddSidebarOpen', 'btnEmptyStateAdd', 'btnMobileAdd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', openAddModal);
+  });
+
+  // Add Modal Actions
+  document.getElementById('btnAddClose')?.addEventListener('click', () => closeModal('addHabitModal'));
+  document.getElementById('btnAddCancel')?.addEventListener('click', () => closeModal('addHabitModal'));
+  document.getElementById('btnAddSave')?.addEventListener('click', saveNewHabit);
+
+  // Edit Modal Actions
+  document.getElementById('btnEditHabitTrigger')?.addEventListener('click', () => {
+    if (currentDetailId) openEditModal(currentDetailId);
+  });
+  document.getElementById('btnEditClose')?.addEventListener('click', () => closeModal('editHabitModal'));
+  document.getElementById('btnEditCancel')?.addEventListener('click', () => closeModal('editHabitModal'));
+  document.getElementById('btnEditSave')?.addEventListener('click', saveEditHabit);
+
+  // Swatches Selection
+  document.querySelectorAll('#colorSwatches .color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      selectedColor = sw.dataset.color;
+      updateSwatchUI('colorSwatches', selectedColor);
+    });
+  });
+  document.querySelectorAll('#editColorSwatches .color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      editSelectedColor = sw.dataset.color;
+      updateSwatchUI('editColorSwatches', editSelectedColor);
+    });
+  });
+
+  // Frequency Buttons
   document.querySelectorAll('.freq-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedFreq = btn.dataset.freq;
@@ -714,47 +1088,86 @@ function bindEvents() {
     });
   });
 
-  // Detail modal close
-  const btnDClose1 = document.getElementById('btnDetailClose');
-  const btnDClose2 = document.getElementById('btnDetailClose2');
-  if (btnDClose1) btnDClose1.addEventListener('click', () => { closeModal('detailModal'); currentDetailId = null; });
-  if (btnDClose2) btnDClose2.addEventListener('click', () => { closeModal('detailModal'); currentDetailId = null; });
+  // Detail Modal Actions
+  document.getElementById('btnDetailClose')?.addEventListener('click', () => { closeModal('detailModal'); currentDetailId = null; });
+  document.getElementById('btnDetailClose2')?.addEventListener('click', () => { closeModal('detailModal'); currentDetailId = null; });
+  document.getElementById('btnArchiveHabit')?.addEventListener('click', toggleArchiveCurrentHabit);
+  document.getElementById('btnDeleteHabit')?.addEventListener('click', deleteCurrentHabit);
 
-  // Archive / Delete in detail modal
-  const btnArchive = document.getElementById('btnArchiveHabit');
-  const btnDelete  = document.getElementById('btnDeleteHabit');
-  if (btnArchive) btnArchive.addEventListener('click', archiveCurrentHabit);
-  if (btnDelete)  btnDelete.addEventListener('click',  deleteCurrentHabit);
-
-  // Confirm modal buttons
-  const btnConfirmCancel = document.getElementById('btnConfirmCancel');
-  const btnConfirmOk     = document.getElementById('btnConfirmOk');
-  if (btnConfirmCancel) btnConfirmCancel.addEventListener('click', () => closeModal('confirmModal'));
-  if (btnConfirmOk) btnConfirmOk.addEventListener('click', () => {
+  // Confirm Modal
+  document.getElementById('btnConfirmCancel')?.addEventListener('click', () => closeModal('confirmModal'));
+  document.getElementById('btnConfirmOk')?.addEventListener('click', () => {
     closeModal('confirmModal');
     if (confirmCallback) { confirmCallback(); confirmCallback = null; }
   });
 
-  // Enter key in habit name field
-  const nameInput = document.getElementById('habitName');
-  if (nameInput) nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveNewHabit(); });
+  // Settings Actions
+  const soundToggle = document.getElementById('soundToggle');
+  if (soundToggle) {
+    soundToggle.checked = soundEnabled;
+    soundToggle.addEventListener('change', e => {
+      soundEnabled = e.target.checked;
+      localStorage.setItem(SOUND_SETTING_KEY, soundEnabled);
+    });
+  }
+
+  document.getElementById('btnExportJson')?.addEventListener('click', exportData);
+  document.getElementById('importJsonInput')?.addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) {
+      importData(e.target.files[0]);
+    }
+  });
+
+  document.getElementById('btnReloadSeedData')?.addEventListener('click', () => {
+    showConfirm('🔄', 'Reload Seed Data?', 'This will re-populate the 4 demo habits with 60-day history.', () => {
+      seedDemoData(true);
+      renderAll();
+    });
+  });
+
+  document.getElementById('btnClearAllData')?.addEventListener('click', () => {
+    showConfirm('⚠️', 'Reset All Habits?', 'This will permanently wipe all local habit data.', () => {
+      habits = [];
+      saveHabits();
+      renderAll();
+    });
+  });
+
+  // Keyboard Shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      openAddModal();
+    }
+    if (e.key === 'Escape') {
+      ['confirmModal', 'detailModal', 'addHabitModal', 'editHabitModal'].forEach(id => closeModal(id));
+    }
+  });
+
+  // Enter to submit in input
+  document.getElementById('habitName')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveNewHabit();
+  });
+  document.getElementById('editHabitName')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveEditHabit();
+  });
 }
 
 // ===================================================================
-// INIT — Bootstrap the application
+// BOOTSTRAP INITIALIZATION
 // ===================================================================
 
 function init() {
   loadHabits();
   seedDemoData();
-  loadHabits(); // Reload after seeding
+  loadHabits();
 
   initDateLabel();
   initQuoteBanner();
   bindEvents();
   renderAll();
 
-  // Trigger progress bar animation after a short paint delay
   requestAnimationFrame(() => {
     setTimeout(() => {
       const active = habits.filter(h => !h.archived);
@@ -762,11 +1175,10 @@ function init() {
       const pct    = active.length === 0 ? 0 : Math.round((done / active.length) * 100);
       const bar    = document.getElementById('progressBarFill');
       if (bar) bar.style.width = `${pct}%`;
-    }, 100);
+    }, 120);
   });
 }
 
-// Start the app when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

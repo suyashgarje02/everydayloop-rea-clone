@@ -1,0 +1,124 @@
+{
+  "$schema": "https://raw.githubusercontent.com/morluto/rea/main/schema-extractor-output.json",
+  "analyzerVersion": "1.4.2",
+  "targetBundle": "app/bundle.js",
+  "extractedAt": "2026-10-26T06:00:00Z",
+  "evidenceConfidence": 0.964,
+  "schemas": {
+    "habit": {
+      "type": "object",
+      "description": "Core habit entity, stored in localStorage array",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable unique identifier — crypto.randomUUID()",
+          "confidence": 0.99
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 48,
+          "description": "Display name of the habit",
+          "confidence": 0.99
+        },
+        "desc": {
+          "type": "string",
+          "maxLength": 120,
+          "nullable": true,
+          "description": "Optional user-written description",
+          "confidence": 0.97
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Brand color hex — used for card accent, heatmap, streak badge",
+          "confidence": 0.99
+        },
+        "freq": {
+          "type": "string",
+          "enum": ["daily", "weekly"],
+          "description": "Tracking frequency mode",
+          "confidence": 0.95
+        },
+        "freqCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7,
+          "description": "Target completions per week (7 for daily habits)",
+          "confidence": 0.93
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "YYYY-MM-DD",
+          "description": "Local date the habit was created",
+          "confidence": 0.98
+        },
+        "archived": {
+          "type": "boolean",
+          "description": "Soft-delete flag — archived habits hidden from dashboard",
+          "confidence": 0.97
+        },
+        "completions": {
+          "type": "object",
+          "description": "Sparse map of completed dates. Key = 'YYYY-MM-DD', value = true",
+          "additionalProperties": {
+            "type": "boolean",
+            "const": true
+          },
+          "confidence": 0.99
+        }
+      },
+      "required": ["id", "name", "color", "freq", "freqCount", "createdAt", "archived", "completions"]
+    },
+    "storageKeys": {
+      "habits": "everydayloop_habits_v2",
+      "seedFlag": "everydayloop_seeded_v2"
+    },
+    "algorithms": {
+      "dateKey": {
+        "description": "Local-time YYYY-MM-DD formatter to avoid UTC timezone drift",
+        "confidence": 0.97,
+        "pseudocode": "y + '-' + (m+1).padStart(2,'0') + '-' + d.getDate().padStart(2,'0')"
+      },
+      "streakEngine": {
+        "description": "Streak active if today OR yesterday completed; walk backwards",
+        "confidence": 0.97,
+        "pseudocode": "cursor = today_done ? 0 : 1; while(completions[daysAgo(cursor)]) { streak++; cursor++ }"
+      },
+      "bestStreak": {
+        "description": "Scan last 120 days for longest consecutive run",
+        "confidence": 0.96
+      },
+      "score30": {
+        "description": "(count_of_completions_in_last_30_days / 30) * 100",
+        "confidence": 0.98
+      },
+      "heatmapLayout": {
+        "description": "91 cells, grid-template-rows: repeat(7, 1fr), grid-auto-flow: column, padded from nearest Sunday",
+        "confidence": 0.94
+      }
+    },
+    "uiTokens": {
+      "font": "Plus Jakarta Sans",
+      "colors": {
+        "bgPrimary":    "#080d16",
+        "bgCard":       "#0f1623",
+        "bgCardHover":  "#141e2e",
+        "borderColor":  "#1e2d42",
+        "textMain":     "#f1f5f9",
+        "textMuted":    "#64748b",
+        "primary":      "#10b981",
+        "primaryGlow":  "rgba(16,185,129,0.15)",
+        "danger":       "#ef4444"
+      },
+      "paletteSwatches": {
+        "emerald": "#10b981",
+        "indigo":  "#6366f1",
+        "pink":    "#ec4899",
+        "amber":   "#f59e0b",
+        "cyan":    "#06b6d4",
+        "violet":  "#8b5cf6"
+      }
+    }
+  }
+}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EverydayLoop (REA Cloned Spec)</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="badge-rea">⚡ Built from REA Extraction Spec</div>
+        <h1 class="logo">Everyday<span>Loop</span></h1>
+        <p class="subtitle" id="currentDateDisplay">Today</p>
+      </div>
+      <div class="header-actions">
+        <button id="addHabitBtn" class="btn btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          New Habit
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Progress Bar -->
+    <section class="summary-card">
+      <div class="summary-header">
+        <div>
+          <h3>Today's Completion Rate</h3>
+          <p class="summary-sub" id="summarySub">Loading progress...</p>
+        </div>
+        <div class="summary-stat">
+          <span id="completionPercent">0%</span>
+        </div>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+      </div>
+    </section>
+
+    <!-- Habit Cards List -->
+    <main>
+      <div class="section-title-row">
+        <h2>Your Active Habits</h2>
+        <span class="days-indicator" id="weekRangeLabel">Past 7 Days</span>
+      </div>
+      <div id="habitsList" class="habits-list">
+        <!-- Rendered by app.js -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail & Heatmap Modal -->
+  <div id="detailModal" class="modal-overlay hidden">
+    <div class="modal-content modal-detail">
+      <div class="modal-header">
+        <div class="detail-title-group">
+          <span class="color-dot" id="modalColorDot"></span>
+          <h2 id="modalHabitTitle">Habit Name</h2>
+        </div>
+        <button id="closeDetailModal" class="btn-icon">&times;</button>
+      </div>
+      
+      <p id="modalHabitDesc" class="detail-desc"></p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Current Streak</span>
+          <span class="stat-value" id="modalCurrentStreak">0 days</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Best Streak</span>
+          <span class="stat-value" id="modalBestStreak">0 days</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">30-Day Score</span>
+          <span class="stat-value" id="modalScore">0%</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Checks</span>
+          <span class="stat-value" id="modalTotalChecks">0</span>
+        </div>
+      </div>
+
+      <div class="heatmap-section">
+        <div class="heatmap-header">
+          <h3>90-Day Contribution Heatmap</h3>
+          <span class="heatmap-legend">
+            <span>Less</span>
+            <span class="legend-cell level-0"></span>
+            <span class="legend-cell level-1"></span>
+            <span>Done</span>
+          </span>
+        </div>
+        <div id="heatmapGrid" class="heatmap-grid"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="deleteHabitBtn" class="btn btn-danger">Delete Habit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Habit Modal -->
+  <div id="addModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New Habit</h2>
+        <button id="closeAddModal" class="btn-icon">&times;</button>
+      </div>
+      <form id="addHabitForm">
+        <div class="form-group">
+          <label for="habitName">Habit Name *</label>
+          <input type="text" id="habitName" required placeholder="e.g. Read 20 mins, Workout, Meditate" />
+        </div>
+        <div class="form-group">
+          <label for="habitDesc">Description / Goal</label>
+          <input type="text" id="habitDesc" placeholder="e.g. Chapter a day before bed" />
+        </div>
+        <div class="form-group">
+          <label>Theme Color</label>
+          <div class="color-options" id="colorOptions">
+            <label class="color-swatch"><input type="radio" name="color" value="#10B981" checked><span style="background: #10B981;"></span></label>
+            <label class="color-swatch"><input type="radio" name="color" value="#6366F1"><span style="background: #6366F1;"></span></label>
+            <label class="color-swatch"><input type="radio" name="color" value="#EC4899"><span style="background: #EC4899;"></span></label>
+            <label class="color-swatch"><input type="radio" name="color" value="#F59E0B"><span style="background: #F59E0B;"></span></label>
+            <label class="color-swatch"><input type="radio" name="color" value="#06B6D4"><span style="background: #06B6D4;"></span></label>
+            <label class="color-swatch"><input type="radio" name="color" value="#8B5CF6"><span style="background: #8B5CF6;"></span></label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelAddBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Habit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

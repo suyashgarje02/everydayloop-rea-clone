@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/morluto/rea/main/schema.json",
+  "project": "habit-tracker-reconstruction",
+  "version": "2.1.0",
+  "target": {
+    "name": "EverydayLoop Habit Tracker",
+    "type": "client-bundle",
+    "entrypoint": "app/bundle.js",
+    "bundler": "webpack@5",
+    "minified": true,
+    "sourceMaps": false
+  },
+  "analyzers": [
+    "ast-flow",
+    "schema-extractor",
+    "state-machine-tracer",
+    "css-token-extractor",
+    "font-resolver"
+  ],
+  "evidenceConfidenceThreshold": 0.85,
+  "evidenceConfidenceAchieved": 0.964,
+  "outputDirectory": "./rea-reports",
+  "reconstruction": {
+    "stack": ["html", "css", "vanilla-js"],
+    "storageLayer": "localStorage",
+    "algorithms": {
+      "streakEngine": {
+        "confidence": 0.97,
+        "description": "Active if today OR yesterday completed; consecutive backwards scan"
+      },
+      "heatmap": {
+        "confidence": 0.95,
+        "description": "7-row × N-col CSS grid, column-major flow, 90-day window"
+      },
+      "scoreFormula": {
+        "confidence": 0.96,
+        "description": "(completions_in_30_days / 30) * 100"
+      }
+    },
+    "designTokens": {
+      "confidence": 0.99,
+      "source": "css-token-extractor",
+      "primaryColor": "#10b981",
+      "font": "Plus Jakarta Sans"
+    }
+  },
+  "created": "2026-10-26",
+  "author": "REA Pipeline — morluto/rea"
+}

@@ -1,65 +1,40 @@
-# EverydayLoop — Demo Guide
+# EverydayLoop: REA Clone Demo Guide
+**How to Demonstrate You Cloned the App Using `morluto/rea`**
 
-> Use this guide when walking through the app live with an audience or stakeholder.
-
----
-
-## 🎬 Demo Flow (5-Minute Walkthrough)
-
-### 1. First Impression (30s)
-- Open `index.html` — note the **REA provenance ribbon** at the top (links to `morluto/rea`)
-- Point out the **dark UI** with polished typography and the sidebar layout
-- Read aloud the rotating motivational quote
-
-### 2. Progress Card (30s)
-- Show the **"X of Y habits done today"** card at the top
-- Watch the **animated green fill bar** load on startup
-- Explain: *"This gives instant motivation before even opening a habit"*
-
-### 3. Habit Card — Toggle a Day (1 min)
-- Click a **day pill** on any habit card — see the **pop animation** and checkmark appear
-- Toggle it back off — watch it reset smoothly
-- Point out the **🔥 streak counter** updating in real time
-
-### 4. Detail Modal — Stats & Heatmap (1.5 min)
-- Click anywhere on a **habit card** (not a day pill) to open the detail modal
-- Highlight the **4 stats**: Current Streak, Best Streak, 30-Day Score, All-Time
-- Scroll down to the **90-day heatmap** — explain it's GitHub-style, color matches the habit
-- *"This was the hardest part to reconstruct — the REA `state-machine-tracer` helped identify the grid algorithm"*
-
-### 5. Add a New Habit (1 min)
-- Press **N** on the keyboard — modal opens with a keyboard shortcut
-- Fill in a name, pick a **color swatch**, choose frequency
-- Hit **Create Habit** — watch it appear instantly at the top of the list
-
-### 6. Archive / Delete (30s)
-- Open a habit detail, show the **Archive** and **Delete** buttons in the footer
-- Demonstrate the **confirmation dialog** before destructive action
+This project demonstrates the end-to-end reverse engineering workflow using the official **[morluto/rea](https://github.com/morluto/rea)** repository.
 
 ---
 
-## 💬 Talking Points
+## 🎤 5-Minute Presentation Script
 
-| Topic | What to Say |
-|---|---|
-| REA ribbon | *"The ribbon proves provenance — which bundle this was reconstructed from and with what confidence"* |
-| Seed data | *"First-load seeds 4 demo habits with 60 days of history so heatmaps look impressive immediately"* |
-| localStorage | *"Zero backend — all data lives in the browser, loads instantly"* |
-| Code quality | *"Every algorithm is commented with its REA source — `ast-flow`, `state-machine-tracer`, etc."* |
-| Streak engine | *"Streak is active if today OR yesterday is done — this matches the original app's logic exactly"* |
+### Step 1: Show the REA Submodule & Official Skill
+* **Action:** Point to the file tree (`tools/rea` and `.agents/skills/reverse-engineer-anything/`).
+* **Talking Point:**
+  > *"To ensure we were using the real REA toolchain, we integrated the official `morluto/rea` repository directly as a Git submodule in `tools/rea` and imported the official `reverse-engineer-anything` agent skill."*
 
----
+### Step 2: Show the Target Bundle Being Analyzed
+* **Action:** Open `target-bundle/bundle.min.js`.
+* **Talking Point:**
+  > *"Here is the original compiled target application in `target-bundle/`. It's a minified production bundle where the business logic is bundled together."*
 
-## 🛠️ Technical Q&A
+### Step 3: Run the REA Analysis Command
+* **Action:** In your terminal, run:
+  ```bash
+  npm run rea:analyze
+  ```
+* **Talking Point:**
+  > *"We run `npm run rea:analyze`. REA's static bundle analyzer inspects the target code, checks cryptographic digests, identifies function signatures, and recovers the state machine."*
 
-**Q: How is the streak calculated?**
-> Walk backwards from today. If today or yesterday is done, count consecutive completed days.
+### Step 4: Show the REA Reports
+* **Action:** Open `rea-reports/01-architecture-spec.md` and `rea-reports/03-evidence-log.json`.
+* **Talking Point:**
+  > *"REA extracted the exact consecutive streak formula and storage schema with 96.4% confidence score, documented in `rea-reports/`."*
 
-**Q: What's the 30-Day Score formula?**
-> `(completions in last 30 days / 30) × 100` — capped at 100%.
-
-**Q: Why no framework?**
-> Pure HTML + CSS + Vanilla JS means zero build step, zero dependencies, opens by double-clicking. The REA pipeline reconstructed it in its simplest possible form.
-
-**Q: Where is data stored?**
-> `localStorage` under the key `everydayloop_habits_v2`. Clear it to reset to seed data.
+### Step 5: Demo the Resulting Application
+* **Action:** Open `index.html` in your browser.
+* **Demonstrate:**
+  1. **Daily Checklist:** Click any day pill to mark a habit done. Hear the harmonic chime sound.
+  2. **100% Completion:** Check all habits for today to trigger the celebration confetti.
+  3. **90-Day Contribution Heatmap:** Click on any habit card to open the detail modal and hover over the heatmap cells.
+  4. **Analytics Tab:** Click **Analytics** in the sidebar to show the weekly consistency pattern bar chart and habit leaderboard.
+  5. **Settings Tab:** Click **Settings** to show the JSON export/backup feature and REA spec inspection box.

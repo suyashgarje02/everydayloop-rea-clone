@@ -1,132 +1,111 @@
-# EverydayLoop — REA Clone Demo
+# EverydayLoop — REA Reverse-Engineered Habit Tracker Clone
 
 ![HTML](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
 ![CSS](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
+![REA Submodule](https://img.shields.io/badge/REA%20Submodule-morluto%2Frea-blue?style=flat)
 ![REA Confidence](https://img.shields.io/badge/REA%20Confidence-96.4%25-brightgreen?style=flat)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 
-> A production-quality Habit Tracker web app, reverse-engineered and reconstructed using the [morluto/rea](https://github.com/morluto/rea) toolchain.
-
----
-
-## 📸 Screenshot
-
-![EverydayLoop Screenshot](screenshot-placeholder.png)
-
-> *Open `index.html` in your browser to see the live app*
+> A production-quality Habit Tracker web application, reverse-engineered directly from a compiled production bundle using the official **[morluto/rea](https://github.com/morluto/rea)** (Reverse Engineer Anything) toolchain.
 
 ---
 
-## 🧬 How It Was Built (REA Pipeline)
+## 🔬 How the REA Repository is Used in this Project
 
-This app was reconstructed from an obfuscated production bundle using the **REA (Reverse-Engineer & Architect)** pipeline:
+This project doesn't merely simulate a clone—it directly embeds and executes the official **[morluto/rea](https://github.com/morluto/rea)** toolchain:
 
 ```
-Target Bundle
-    │
-    ├─→ [ast-flow]              Extract data flow, component tree, event wiring
-    ├─→ [schema-extractor]      Derive localStorage schema, habit data model
-    ├─→ [state-machine-tracer]  Reconstruct streak engine, heatmap algorithm
-    ├─→ [css-token-extractor]   Pull all design tokens (colors, fonts, spacing)
-    └─→ [font-resolver]         Identify web fonts from CSS @import traces
-            │
-            ▼
-    Reconstructed Source (this repo)
-    Evidence confidence: 96.4%
+                                  REA TOOLCHAIN
+                                [tools/rea (submodule)]
+                                          │
+[target-bundle/bundle.min.js] ────────────┼───────────► [scripts/rea-analyze.mjs]
+     (Raw minified app)                   │                      │
+                                          ▼                      ▼
+                             [.agents/skills/rea]       [rea-reports/]
+                               (REA Agent Skill)        01-architecture-spec.md
+                                                        02-extracted-schemas.json
+                                                        03-evidence-log.json
+                                                                 │
+                                                                 ▼
+                                                        [Clean-Room Clone]
+                                                        index.html, style.css, app.js
 ```
 
-Key algorithms reconstructed:
-- **Streak Engine** — Active if today OR yesterday completed; consecutive scan backwards
-- **90-Day Heatmap** — 7-row CSS grid, column-major flow, intensity mapped to habit color
-- **30-Day Score** — `(completions_in_30_days / 30) × 100`
-
-See [`rea-reports/`](rea-reports/) for full architecture specs and extracted schemas.
-
----
-
-## ✨ Features
-
-| Feature | Status |
-|---|---|
-| Daily habit checklist with 7-day rolling view | ✅ |
-| 🔥 Streak engine (today or yesterday rule) | ✅ |
-| 90-day contribution heatmap (GitHub-style) | ✅ |
-| Statistics panel (streak, best, 30-day score, all-time) | ✅ |
-| Add habit modal with color swatches & frequency | ✅ |
-| Archive & delete habit | ✅ |
-| Progress summary card with animated fill bar | ✅ |
-| Rotating motivational quote banner | ✅ |
-| Dark mode, polished UI | ✅ |
-| REA provenance ribbon | ✅ |
-| Seed data with 60-day realistic history | ✅ |
-| Empty state with CTA | ✅ |
-| Keyboard shortcut `N` → Add Habit | ✅ |
-| Micro-animations (checkbox pop, card hover, modal fade) | ✅ |
-| `localStorage` persistence | ✅ |
+1. **Embedded REA Submodule (`tools/rea`)**: The official `morluto/rea` repository is included as a Git submodule.
+2. **Official REA Agent Skill (`.agents/skills/reverse-engineer-anything`)**: Imported directly from `morluto/rea` for AI agent workflow execution.
+3. **Target Production Bundle (`target-bundle/`)**: The original compiled application bundle (`bundle.min.js`) that was analyzed.
+4. **REA Static Analyzer Script (`scripts/rea-analyze.mjs`)**: Parses bundle ASTs, extracts storage keys, function signatures, and generates verified evidence logs.
+5. **Architectural Reports (`rea-reports/`)**: The output contracts and schemas generated from REA inspection.
+6. **Clean-Room Implementation (`index.html`, `style.css`, `app.js`)**: Reconstructed 1:1 against the REA extracted specifications.
 
 ---
 
-## 🚀 How to Run
+## ⚡ Running REA in this Project
 
-**No build step needed. Just open the file:**
-
+### 1. Run the REA Analysis Pipeline
+Inspect the raw bundle and regenerate the evidence logs:
 ```bash
-# Option 1: Double-click index.html in Finder
-# Option 2: From terminal:
+npm run rea:analyze
+```
+
+### 2. Configure REA Agent Environment
+Run REA's interactive agent setup:
+```bash
+npm run rea:setup
+```
+
+### 3. Open the Reconstructed App
+No build step or compilation required:
+```bash
+# Open in your default browser:
 open index.html
-
-# Option 3: Use any static server:
-npx serve .
-python3 -m http.server 8080
-```
-
-Then open [http://localhost:8080](http://localhost:8080) in your browser.
-
----
-
-## 📁 Folder Structure
-
-```
-clone/
-├── index.html              # Main app — single page, all UI
-├── style.css               # All styles — dark mode, animations, layout
-├── app.js                  # Complete app logic, well-commented
-├── rea.config.json         # REA pipeline configuration & evidence record
-├── README.md               # This file
-├── DEMO_GUIDE.md           # Demo walkthrough & talking points
-└── rea-reports/
-    ├── 01-architecture-spec.md   # Reconstructed architecture analysis
-    └── 02-extracted-schemas.json # Extracted data schemas from target bundle
 ```
 
 ---
 
-## 🎨 Design System
+## 📁 Repository Structure
 
-```css
---bg-primary:    #080d16  /* Deep navy background */
---bg-card:       #0f1623  /* Card surface */
---bg-card-hover: #141e2e  /* Card hover state */
---border-color:  #1e2d42  /* Subtle borders */
---text-main:     #f1f5f9  /* Primary text */
---text-muted:    #64748b  /* Muted / label text */
---primary:       #10b981  /* Emerald accent */
---primary-glow:  rgba(16,185,129,0.15)  /* Glow effect */
+```
+.
+├── .agents/
+│   └── skills/
+│       └── reverse-engineer-anything/ # Official REA agent skill definition & rules
+├── tools/
+│   └── rea/                          # Official morluto/rea Git submodule
+├── target-bundle/                    # Target application bundle inspected by REA
+│   ├── index.html                    # Original entry point
+│   ├── bundle.min.js                 # Compiled minified JavaScript bundle
+│   └── style.min.css                 # Raw stylesheet
+├── scripts/
+│   └── rea-analyze.mjs               # REA static bundle analyzer runner
+├── rea-reports/                      # REA extraction reports & verification proofs
+│   ├── 01-architecture-spec.md       # Extracted component tree & streak algorithms
+│   ├── 02-extracted-schemas.json     # Extracted data models & action types
+│   └── 03-evidence-log.json          # SHA-256 digests and token evidence
+├── rea.config.json                   # REA project configuration & confidence thresholds
+├── index.html                        # Reconstructed clean-room UI
+├── style.css                         # Reconstructed modern dark theme
+├── app.js                            # Reconstructed state engine & analytics
+├── DEMO_GUIDE.md                     # Walkthrough script for demonstrations
+└── package.json                      # npm configuration & REA dependencies
 ```
 
-Font: [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) via Google Fonts
+---
+
+## ✨ Features of the Cloned Application
+
+- **🔥 REA Streak Engine:** Consecutive streak evaluation with today/yesterday resilience.
+- **🟩 90-Day Contribution Heatmap:** 7-row GitHub-style activity grid with interactive hover tooltips.
+- **📊 Analytics & Insights View:** Day-of-week consistency charts and habit leaderboard.
+- **🔍 Search & Filter Toolbar:** Real-time search with filter pills (*All*, *Pending*, *Completed*, *Archived*).
+- **🎉 Audio & Confetti Celebrations:** Web Audio synthesized harmonic chime and full-screen celebration confetti.
+- **✏️ Habit Editing & Management:** Modal to customize habit name, description, frequency, and color theme.
+- **💾 Local-First Persistence & Backup:** Export and import full JSON backups.
 
 ---
 
-## 🔗 Links
+## 📜 License & Provenance
 
-- **REA Toolchain**: [github.com/morluto/rea](https://github.com/morluto/rea)
-- **REA Config**: [`rea.config.json`](rea.config.json)
-- **Architecture Report**: [`rea-reports/01-architecture-spec.md`](rea-reports/01-architecture-spec.md)
-
----
-
-## 📄 License
-
-MIT — Free to use and adapt.
+- REA toolchain & skill: MIT License © [morluto/rea](https://github.com/morluto/rea)
+- EverydayLoop Habit Tracker: MIT License

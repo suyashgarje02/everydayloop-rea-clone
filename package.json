@@ -1,0 +1,24 @@
+{
+  "name": "everydayloop-rea-clone",
+  "version": "2.2.0",
+  "description": "EverydayLoop Habit Tracker — Reverse-engineered and cloned using morluto/rea",
+  "type": "module",
+  "scripts": {
+    "start": "open index.html",
+    "rea:analyze": "node scripts/rea-analyze.mjs",
+    "rea:setup": "npx rea-agents setup"
+  },
+  "keywords": [
+    "reverse-engineering",
+    "rea",
+    "morluto-rea",
+    "habit-tracker",
+    "mcp-server",
+    "clean-room-clone"
+  ],
+  "author": "suyashgarje02",
+  "license": "MIT",
+  "dependencies": {
+    "rea-agents": "^6.8.0"
+  }
+}
